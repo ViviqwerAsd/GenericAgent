@@ -141,6 +141,7 @@ fs_allowed_users = ["ou_xxx"]  # or ['*']
 **Vision model**: Images are sent as true multimodal input to OpenAI Vision-compatible backends on the first turn
 
 Full setup: [assets/SETUP_FEISHU.md](assets/SETUP_FEISHU.md)
+if the Lark bot cannot be used normally after the configuration is completed, please refer to [the Lark bot Q&A](https://my.feishu.cn/wiki/OvpXwhqiUigIdtkXGbgcNWmGnyc)
 
 
 ### WeCom (Enterprise WeChat)
@@ -392,7 +393,7 @@ fs_allowed_users = ["ou_xxx"]  # 或 ['*']
 **视觉模型**：图片首轮以真正的多模态输入发送给兼容 OpenAI Vision 的后端
 
 详细配置见 [assets/SETUP_FEISHU.md](assets/SETUP_FEISHU.md)
-
+如果飞书机器人配置完成后无法正常使用，请参考[飞书机器人常见Q&A](https://my.feishu.cn/wiki/OvpXwhqiUigIdtkXGbgcNWmGnyc)
 
 ### 企业微信（WeCom）
 

@@ -44,16 +44,10 @@ class GeneraticAgent:
         for k, cfg in mykeys.items():
             if not any(x in k for x in ['api', 'config', 'cookie']): continue
             try:
-                if 'claude' in k: llm_sessions += [ClaudeSession(api_key=cfg['apikey'], api_base=cfg['apibase'], model=cfg['model'])]
-                if 'oai' in k: llm_sessions += [LLMSession(
-                    api_key=cfg['apikey'], api_base=cfg['apibase'], model=cfg['model'], proxy=cfg.get('proxy'),
-                    api_mode=cfg.get('api_mode', 'chat_completions'),
-                    max_retries=cfg.get('max_retries', 2),
-                    connect_timeout=cfg.get('connect_timeout', 10),
-                    read_timeout=cfg.get('read_timeout', 120),
-                )]
-                if 'xai' in k: llm_sessions += [XaiSession(cfg, mykeys.get('proxy', ''))]
-                if 'sider' in k: llm_sessions += [SiderLLMSession(cfg, default_model=x) for x in \
+                if 'claude' in k: llm_sessions += [ClaudeSession(cfg=cfg)]
+                if 'oai' in k: llm_sessions += [LLMSession(cfg=cfg)]
+                if 'xai' in k: llm_sessions += [XaiSession(cfg=cfg)]
+                if 'sider' in k: llm_sessions += [SiderLLMSession(cfg={'apikey': cfg, 'model': x}) for x in \
                                     ["gemini-3.0-flash", "gpt-5.4"]]
             except: pass
         if len(llm_sessions) > 0: self.llmclient = ToolClient(llm_sessions, auto_save_tokens=True)
@@ -62,10 +56,8 @@ class GeneraticAgent:
         self.history = []               
         self.task_queue = queue.Queue() 
         self.is_running, self.stop_sig = False, False
-        self.llm_no = 0
-        self.inc_out = False
-        self.handler = None
-        self.verbose = True
+        self.llm_no = 0;  self.inc_out = False
+        self.handler = None; self.verbose = True
 
     def next_llm(self, n=-1):
         self.llm_no = ((self.llm_no + 1) if n < 0 else n) % len(self.llmclient.backends)
@@ -79,8 +71,7 @@ class GeneraticAgent:
         print('Abort current task...')
         if not self.is_running: return
         self.stop_sig = True
-        if self.handler is not None: 
-            self.handler.code_stop_signal.append(1)
+        if self.handler is not None: self.handler.code_stop_signal.append(1)
             
     def put_task(self, query, source="user", images=None):
         display_queue = queue.Queue()

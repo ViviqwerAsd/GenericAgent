@@ -4,6 +4,8 @@ oai_config = {
     'apibase':"http://243.55.19.137:2001",
     'model':"openai/gpt-5.1",
     'api_mode':"chat_completions",  # optional: "chat_completions" | "responses"
+    # 'reasoning_effort': "low",    # optional: none | low | medium | high | xhigh;  
+    # Only OPENAI models support this parameter, and it may not be supported by all models. It is used to control the amount of reasoning effort the model should use when generating a response. Higher values may result in more accurate and detailed responses, but may also take longer to generate.
     'max_retries': 2,               # optional: retries for 429/timeout/5xx
     'connect_timeout': 10,          # optional: seconds
     'read_timeout': 120             # optional: seconds (stream read)

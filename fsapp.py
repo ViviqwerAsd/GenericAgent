@@ -1,4 +1,11 @@
-import json, os, re, sys, threading, time
+import glob
+import json
+import os
+import queue as Q
+import re
+import sys
+import threading
+import time
 
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, PROJECT_ROOT)
@@ -8,9 +15,9 @@ import lark_oapi as lark
 from lark_oapi.api.im.v1 import *
 
 from agentmain import GeneraticAgent
-from chatapp_common import clean_reply, extract_files, format_restore, public_access, strip_files, to_allowed_set
 from llmcore import mykeys
 
+_TAG_PATS = [r"<" + t + r">.*?</" + t + r">" for t in ("thinking", "summary", "tool_use", "file_content")]
 _IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp", ".ico", ".tiff", ".tif"}
 _AUDIO_EXTS = {".opus", ".mp3", ".wav", ".m4a", ".aac"}
 _VIDEO_EXTS = {".mp4", ".mov", ".avi", ".mkv", ".webm"}
@@ -32,13 +39,37 @@ MEDIA_DIR = os.path.join(TEMP_DIR, "feishu_media")
 os.makedirs(MEDIA_DIR, exist_ok=True)
 
 
+def _clean(text):
+    for pat in _TAG_PATS:
+        text = re.sub(pat, "", text, flags=re.DOTALL)
+    return re.sub(r"\n{3,}", "\n\n", text).strip() or "..."
+
+
+def _extract_files(text):
+    return re.findall(r"\[FILE:([^\]]+)\]", text or "")
+
+
+def _strip_files(text):
+    return re.sub(r"\[FILE:[^\]]+\]", "", text or "").strip()
+
+
 def _display_text(text):
-    return strip_files(clean_reply(text)) or "..."
+    return _strip_files(_clean(text)) or "..."
+
+
+def _to_allowed_set(value):
+    if value is None:
+        return set()
+    if isinstance(value, str):
+        value = [value]
+    return {str(x).strip() for x in value if str(x).strip()}
 
 
 def _parse_json(raw):
+    if not raw:
+        return {}
     try:
-        return json.loads(raw) if raw else {}
+        return json.loads(raw)
     except Exception:
         return {}
 
@@ -198,27 +229,31 @@ def _extract_post_content(content_json):
 
 APP_ID = str(mykeys.get("fs_app_id", "") or "").strip()
 APP_SECRET = str(mykeys.get("fs_app_secret", "") or "").strip()
-ALLOWED_USERS = to_allowed_set(mykeys.get("fs_allowed_users", []))
-PUBLIC_ACCESS = public_access(ALLOWED_USERS)
+ALLOWED_USERS = _to_allowed_set(mykeys.get("fs_allowed_users", []))
+PUBLIC_ACCESS = not ALLOWED_USERS or "*" in ALLOWED_USERS
 
 agent = GeneraticAgent()
 threading.Thread(target=agent.run, daemon=True).start()
 client, user_tasks = None, {}
 
 
-def create_client(): return lark.Client.builder().app_id(APP_ID).app_secret(APP_SECRET).log_level(lark.LogLevel.INFO).build()
-def _card(text): return json.dumps({"config": {"wide_screen_mode": True}, "elements": [{"tag": "markdown", "content": text}]}, ensure_ascii=False)
+def create_client():
+    return lark.Client.builder().app_id(APP_ID).app_secret(APP_SECRET).log_level(lark.LogLevel.INFO).build()
 
 
-def send_message(open_id, content, msg_type="text", use_card=False):
+def _card(text):
+    return json.dumps({"config": {"wide_screen_mode": True}, "elements": [{"tag": "markdown", "content": text}]}, ensure_ascii=False)
+
+
+def send_message(receive_id, content, msg_type="text", use_card=False, receive_id_type="open_id"):
     if use_card:
         payload, real_type = _card(content), "interactive"
     elif msg_type == "text":
         payload, real_type = json.dumps({"text": content}, ensure_ascii=False), "text"
     else:
         payload, real_type = content, msg_type
-    body = CreateMessageRequest.builder().receive_id_type("open_id").request_body(
-        CreateMessageRequestBody.builder().receive_id(open_id).msg_type(real_type).content(payload).build()
+    body = CreateMessageRequest.builder().receive_id_type(receive_id_type).request_body(
+        CreateMessageRequestBody.builder().receive_id(receive_id).msg_type(real_type).content(payload).build()
     ).build()
     response = client.im.v1.message.create(body)
     if response.success():
@@ -235,10 +270,6 @@ def update_message(message_id, content):
     if not response.success():
         print(f"[ERROR] update_message 失败: {response.code}, {response.msg}")
     return response.success()
-
-
-def _read_file_obj(response):
-    return response.file.read() if hasattr(response.file, "read") else response.file
 
 
 def _upload_image_sync(file_path):
@@ -274,29 +305,51 @@ def _upload_file_sync(file_path):
     return None
 
 
-def _download_resource(message_id, file_key, resource_type, label):
+def _download_image_sync(message_id, image_key):
+    try:
+        request = GetMessageResourceRequest.builder().message_id(message_id).file_key(image_key).type("image").build()
+        response = client.im.v1.message_resource.get(request)
+        if response.success():
+            data = response.file.read() if hasattr(response.file, "read") else response.file
+            return data, response.file_name
+        print(f"[ERROR] download image failed: {response.code}, {response.msg}")
+    except Exception as e:
+        print(f"[ERROR] download image failed {image_key}: {e}")
+    return None, None
+
+
+def _download_file_sync(message_id, file_key, resource_type="file"):
+    if resource_type == "audio":
+        resource_type = "file"
     try:
         request = GetMessageResourceRequest.builder().message_id(message_id).file_key(file_key).type(resource_type).build()
         response = client.im.v1.message_resource.get(request)
         if response.success():
-            return _read_file_obj(response), response.file_name
-        print(f"[ERROR] download {label} failed: {response.code}, {response.msg}")
+            data = response.file.read() if hasattr(response.file, "read") else response.file
+            return data, response.file_name
+        print(f"[ERROR] download {resource_type} failed: {response.code}, {response.msg}")
     except Exception as e:
-        print(f"[ERROR] download {label} failed {file_key}: {e}")
+        print(f"[ERROR] download {resource_type} failed {file_key}: {e}")
     return None, None
 
 
 def _download_and_save_media(msg_type, content_json, message_id):
-    file_key = content_json.get("image_key") if msg_type == "image" else content_json.get("file_key")
-    resource_type = "image" if msg_type == "image" else ("file" if msg_type == "audio" else msg_type)
-    default_ext = ".jpg" if msg_type == "image" else ".opus" if msg_type == "audio" else ""
-    if not (file_key and message_id):
-        return None, None
-    data, filename = _download_resource(message_id, file_key, resource_type, msg_type)
-    if data:
-        filename = filename or f"{file_key[:16]}{default_ext}"
-        if msg_type == "audio" and filename and not filename.endswith(".opus"):
-            filename += ".opus"
+    data, filename = None, None
+    if msg_type == "image":
+        image_key = content_json.get("image_key")
+        if image_key and message_id:
+            data, filename = _download_image_sync(message_id, image_key)
+            if not filename:
+                filename = f"{image_key[:16]}.jpg"
+    elif msg_type in ("audio", "file", "media"):
+        file_key = content_json.get("file_key")
+        if file_key and message_id:
+            data, filename = _download_file_sync(message_id, file_key, msg_type)
+            if not filename:
+                filename = file_key[:16]
+            if msg_type == "audio" and filename and not filename.endswith(".opus"):
+                filename = f"{filename}.opus"
+    if data and filename:
         file_path = os.path.join(MEDIA_DIR, os.path.basename(filename))
         with open(file_path, "wb") as f:
             f.write(data)
@@ -305,36 +358,38 @@ def _download_and_save_media(msg_type, content_json, message_id):
 
 
 def _describe_media(msg_type, file_path, filename):
-    return f"[{msg_type}: {filename}]\n[{'Image' if msg_type == 'image' else 'File'}: source: {file_path}]"
+    if msg_type == "image":
+        return f"[image: {filename}]\n[Image: source: {file_path}]"
+    if msg_type == "audio":
+        return f"[audio: {filename}]\n[File: source: {file_path}]"
+    if msg_type in ("file", "media"):
+        return f"[{msg_type}: {filename}]\n[File: source: {file_path}]"
+    return f"[{msg_type}]\n[File: source: {file_path}]"
 
 
-def _send_local_file(open_id, file_path):
+def _send_local_file(receive_id, file_path, receive_id_type="open_id"):
     if not os.path.isfile(file_path):
-        send_message(open_id, f"⚠️ 文件不存在: {file_path}")
+        send_message(receive_id, f"⚠️ 文件不存在: {file_path}", receive_id_type=receive_id_type)
         return False
     ext = os.path.splitext(file_path)[1].lower()
-    is_image = ext in _IMAGE_EXTS
-    file_key = _upload_image_sync(file_path) if is_image else _upload_file_sync(file_path)
-    if file_key:
-        key_name, msg_type = ("image_key", "image") if is_image else ("file_key", "media" if ext in _AUDIO_EXTS or ext in _VIDEO_EXTS else "file")
-        send_message(open_id, json.dumps({key_name: file_key}, ensure_ascii=False), msg_type=msg_type)
-        return True
-    send_message(open_id, f"⚠️ 文件发送失败: {os.path.basename(file_path)}")
+    if ext in _IMAGE_EXTS:
+        image_key = _upload_image_sync(file_path)
+        if image_key:
+            send_message(receive_id, json.dumps({"image_key": image_key}, ensure_ascii=False), msg_type="image", receive_id_type=receive_id_type)
+            return True
+    else:
+        file_key = _upload_file_sync(file_path)
+        if file_key:
+            msg_type = "media" if ext in _AUDIO_EXTS or ext in _VIDEO_EXTS else "file"
+            send_message(receive_id, json.dumps({"file_key": file_key}, ensure_ascii=False), msg_type=msg_type, receive_id_type=receive_id_type)
+            return True
+    send_message(receive_id, f"⚠️ 文件发送失败: {os.path.basename(file_path)}", receive_id_type=receive_id_type)
     return False
 
 
-def _send_generated_files(open_id, raw_text):
-    for file_path in extract_files(raw_text):
-        _send_local_file(open_id, file_path)
-
-
-def _append_media(parts, image_paths, msg_type, file_path, filename):
-    if not (file_path and filename):
-        parts.append(f"[{msg_type}: download failed]")
-        return
-    parts.append(_describe_media(msg_type, file_path, filename))
-    if msg_type == "image":
-        image_paths.append(file_path)
+def _send_generated_files(receive_id, raw_text, receive_id_type="open_id"):
+    for file_path in _extract_files(raw_text):
+        _send_local_file(receive_id, file_path, receive_id_type)
 
 
 def _build_user_message(message):
@@ -352,10 +407,19 @@ def _build_user_message(message):
             parts.append(text)
         for image_key in image_keys:
             file_path, filename = _download_and_save_media("image", {"image_key": image_key}, message_id)
-            _append_media(parts, image_paths, "image", file_path, filename)
+            if file_path and filename:
+                parts.append(_describe_media("image", file_path, filename))
+                image_paths.append(file_path)
+            else:
+                parts.append("[image: download failed]")
     elif msg_type in ("image", "audio", "file", "media"):
         file_path, filename = _download_and_save_media(msg_type, content_json, message_id)
-        _append_media(parts, image_paths, msg_type, file_path, filename)
+        if file_path and filename:
+            parts.append(_describe_media(msg_type, file_path, filename))
+            if msg_type == "image":
+                image_paths.append(file_path)
+        else:
+            parts.append(f"[{msg_type}: download failed]")
     elif msg_type in ("share_chat", "share_user", "interactive", "share_calendar_event", "system", "merge_forward"):
         parts.append(_extract_share_card_content(content_json, msg_type))
     else:
@@ -366,21 +430,28 @@ def _build_user_message(message):
 def handle_message(data):
     event, message, sender = data.event, data.event.message, data.event.sender
     open_id = sender.sender_id.open_id
+    chat_id = message.chat_id
     if not PUBLIC_ACCESS and open_id not in ALLOWED_USERS:
         print(f"未授权用户: {open_id}")
         return
     user_input, image_paths = _build_user_message(message)
     if not user_input:
-        send_message(open_id, f"⚠️ 暂不支持处理此类飞书消息：{message.message_type}")
+        if chat_id:
+            send_message(chat_id, f"⚠️ 暂不支持处理此类飞书消息：{message.message_type}", receive_id_type="chat_id")
+        else:
+            send_message(open_id, f"⚠️ 暂不支持处理此类飞书消息：{message.message_type}")
         return
     print(f"收到消息 [{open_id}] ({message.message_type}, {len(image_paths)} images): {user_input[:200]}")
     if message.message_type == "text" and user_input.startswith("/"):
-        return handle_command(open_id, user_input)
+        return handle_command(open_id, user_input, chat_id)
 
     def run_agent():
         user_tasks[open_id] = {"running": True}
         try:
-            msg_id, dq, last_text = send_message(open_id, "思考中...", use_card=True), agent.put_task(user_input, source="feishu", images=image_paths), ""
+            if chat_id:
+                msg_id, dq, last_text = send_message(chat_id, "思考中...", use_card=True, receive_id_type="chat_id"), agent.put_task(user_input, source="feishu", images=image_paths), ""
+            else:
+                msg_id, dq, last_text = send_message(open_id, "思考中...", use_card=True), agent.put_task(user_input, source="feishu", images=image_paths), ""
             while user_tasks.get(open_id, {}).get("running", False):
                 time.sleep(3)
                 item = None
@@ -398,55 +469,81 @@ def handle_message(data):
                     cut = show[-3000:]
                     if cut.count("```") % 2 == 1:
                         cut = "```\n" + cut
-                    msg_id, last_text, show = send_message(open_id, "(继续...)", use_card=True), "", cut
+                    if chat_id:
+                        msg_id, last_text, show = send_message(chat_id, "(继续...)", use_card=True, receive_id_type="chat_id"), "", cut
+                    else:
+                        msg_id, last_text, show = send_message(open_id, "(继续...)", use_card=True), "", cut
                 display = show if done else show + " ⏳"
                 if display != last_text and msg_id:
                     update_message(msg_id, display)
                     last_text = display
                 if done:
-                    _send_generated_files(open_id, raw)
+                    if chat_id:
+                        _send_generated_files(chat_id, raw, receive_id_type="chat_id")
+                    else:
+                        _send_generated_files(open_id, raw)
                     break
             if not user_tasks.get(open_id, {}).get("running", True):
-                send_message(open_id, "⏹️ 已停止")
+                if chat_id:
+                    send_message(chat_id, "已停止", receive_id_type="chat_id")
+                else:
+                    send_message(open_id, "已停止")
         except Exception as e:
             import traceback
 
             print(f"[ERROR] run_agent 异常: {e}")
             traceback.print_exc()
-            send_message(open_id, f"❌ 错误: {str(e)}")
+            if chat_id:
+                send_message(chat_id, f"错误: {str(e)}", receive_id_type="chat_id")
+            else:
+                send_message(open_id, f"错误: {str(e)}")
         finally:
             user_tasks.pop(open_id, None)
 
     threading.Thread(target=run_agent, daemon=True).start()
 
 
-def handle_command(open_id, cmd):
+def handle_command(open_id, cmd, chat_id=None):
+    def _send_cmd_response(content):
+        if chat_id:
+            send_message(chat_id, content, receive_id_type="chat_id")
+        else:
+            send_message(open_id, content)
     if cmd == "/stop":
         if open_id in user_tasks:
             user_tasks[open_id]["running"] = False
         agent.abort()
-        send_message(open_id, "⏹️ 正在停止...")
+        _send_cmd_response("正在停止...")
     elif cmd == "/new":
         agent.abort()
         agent.history = []
-        send_message(open_id, "🆕 已清空当前共享上下文")
+        _send_cmd_response("已清空当前共享上下文")
     elif cmd == "/help":
-        send_message(open_id, "📖 命令列表:\n/stop - 停止当前任务\n/status - 查看状态\n/restore - 恢复上次对话历史\n/new - 开启新对话\n/help - 显示帮助")
+        _send_cmd_response("命令列表:\n/stop - 停止当前任务\n/status - 查看状态\n/restore - 恢复上次对话历史\n/new - 开启新对话\n/help - 显示帮助")
     elif cmd == "/status":
-        send_message(open_id, f"状态: {'🟢 空闲' if not agent.is_running else '🔴 运行中'}")
+        _send_cmd_response(f"状态: {'空闲' if not agent.is_running else '运行中'}")
     elif cmd == "/restore":
         try:
-            restored_info, err = format_restore()
-            if err:
-                return send_message(open_id, err)
-            restored, fname, count = restored_info
+            files = glob.glob("./temp/model_responses_*.txt")
+            if not files:
+                return _send_cmd_response("没有找到历史记录")
+            latest = max(files, key=os.path.getmtime)
+            with open(latest, "r", encoding="utf-8") as f:
+                content = f.read()
+            users = re.findall(r"=== USER ===\n(.+?)(?==== |$)", content, re.DOTALL)
+            resps = re.findall(r"=== Response ===.*?\n(.+?)(?==== Prompt|$)", content, re.DOTALL)
+            count = 0
+            for u, r in zip(users, resps):
+                u, r = u.strip(), r.strip()[:500]
+                if u and r:
+                    agent.history.extend([f"[USER]: {u}", f"[Agent] {r}"])
+                    count += 1
             agent.abort()
-            agent.history.extend(restored)
-            send_message(open_id, f"✅ 已恢复 {count} 轮对话\n来源: {fname}\n(仅恢复上下文，请输入新问题继续)")
+            _send_cmd_response(f"已恢复 {count} 轮对话\n来源: {os.path.basename(latest)}\n(仅恢复上下文，请输入新问题继续)")
         except Exception as e:
-            send_message(open_id, f"❌ 恢复失败: {e}")
+            _send_cmd_response(f"恢复失败: {e}")
     else:
-        send_message(open_id, f"❓ 未知命令: {cmd}")
+        _send_cmd_response(f"未知命令: {cmd}")
 
 
 def main():

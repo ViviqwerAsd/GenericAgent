@@ -132,6 +132,10 @@ class LLMSession:
         self.max_retries = max(0, int(cfg.get('max_retries', 2)))
         self.connect_timeout = max(1, int(cfg.get('connect_timeout', 10)))
         self.read_timeout = max(5, int(cfg.get('read_timeout', 120)))
+        effort = cfg.get('reasoning_effort')
+        effort = None if effort is None else str(effort).strip().lower()
+        self.reasoning_effort = effort if effort in ['none', 'minimal','low', 'medium', 'high', 'xhigh'] else None
+        if effort and self.reasoning_effort is None: print(f"[WARN] Invalid reasoning_effort {effort!r}, ignored.")
         mode = str(cfg.get('api_mode', 'chat_completions')).strip().lower().replace('-', '_')
         if mode in ["responses", "response"]: self.api_mode = "responses"
         else: self.api_mode = "chat_completions"
@@ -176,9 +180,11 @@ class LLMSession:
         if self.api_mode == "responses":
             url = auto_make_url(self.api_base, "responses")
             payload = {"model": model, "input": self._to_responses_input(messages), "temperature": temperature, "stream": True}
+            if self.reasoning_effort: payload["reasoning"] = {"effort": self.reasoning_effort}
         else:
             url = auto_make_url(self.api_base, "chat/completions")
             payload = {"model": model, "messages": messages, "temperature": temperature, "stream": True}
+            if self.reasoning_effort: payload["reasoning_effort"] = self.reasoning_effort
         for attempt in range(self.max_retries + 1):
             streamed_any = False
             try:

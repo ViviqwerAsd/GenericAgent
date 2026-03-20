@@ -5,7 +5,7 @@ if sys.stderr is None: sys.stderr = open(os.devnull, "w")
 elif hasattr(sys.stderr, 'reconfigure'): sys.stderr.reconfigure(errors='replace')
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from llmcore import SiderLLMSession, LLMSession, ToolClient, ClaudeSession, XaiSession, build_multimodal_content
+from llmcore import SiderLLMSession, LLMSession, ToolClient, ClaudeSession, XaiSession, GeminiSession, build_multimodal_content, refresh_mykeys
 from agent_loop import agent_runner_loop, StepOutcome, BaseHandler
 from ga import GenericAgentHandler, smart_format, get_global_memory, format_error
 
@@ -39,25 +39,45 @@ class GeneraticAgent:
     def __init__(self):
         script_dir = os.path.dirname(os.path.abspath(__file__))
         os.makedirs(os.path.join(script_dir, 'temp'), exist_ok=True)
-        from llmcore import mykeys
-        llm_sessions = []
-        for k, cfg in mykeys.items():
-            if not any(x in k for x in ['api', 'config', 'cookie']): continue
-            try:
-                if 'claude' in k: llm_sessions += [ClaudeSession(cfg=cfg)]
-                if 'oai' in k: llm_sessions += [LLMSession(cfg=cfg)]
-                if 'xai' in k: llm_sessions += [XaiSession(cfg=cfg)]
-                if 'sider' in k: llm_sessions += [SiderLLMSession(cfg={'apikey': cfg, 'model': x}) for x in \
-                                    ["gemini-3.0-flash", "gpt-5.4"]]
-            except: pass
-        if len(llm_sessions) > 0: self.llmclient = ToolClient(llm_sessions, auto_save_tokens=True)
-        else: self.llmclient = None
         self.lock = threading.Lock()
         self.history = []               
         self.task_queue = queue.Queue() 
         self.is_running, self.stop_sig = False, False
         self.llm_no = 0;  self.inc_out = False
         self.handler = None; self.verbose = True
+        self.reload_backends()
+
+    def _build_llm_sessions(self, mykeys):
+        llm_sessions = []
+        ordered_items = list(mykeys.items())
+        default_key = mykeys.get("default_model_key")
+        if default_key:
+            ordered_items = [item for item in ordered_items if item[0] == default_key] + [item for item in ordered_items if item[0] != default_key]
+        for k, cfg in ordered_items:
+            if not any(x in k for x in ['api', 'config', 'cookie']): 
+                continue
+            try:
+                if 'claude' in k:
+                    llm_sessions += [ClaudeSession(cfg=cfg)]
+                if 'oai' in k:
+                    llm_sessions += [LLMSession(cfg=cfg)]
+                if 'xai' in k:
+                    llm_sessions += [XaiSession(cfg=cfg)]
+                if 'google' in k or 'gemini' in k:
+                    llm_sessions += [GeminiSession(cfg=cfg if isinstance(cfg, dict) else {'google_api_key': cfg})]
+                if 'sider' in k:
+                    llm_sessions += [SiderLLMSession(cfg={'apikey': cfg, 'model': x}) for x in ["gemini-3.0-flash", "gpt-5.4"]]
+            except:
+                pass
+        return llm_sessions
+
+    def reload_backends(self):
+        mykeys = refresh_mykeys()
+        llm_sessions = self._build_llm_sessions(mykeys)
+        self.llmclient = ToolClient(llm_sessions, auto_save_tokens=True) if llm_sessions else None
+        if self.llmclient and self.llm_no >= len(self.llmclient.backends):
+            self.llm_no = 0
+        return bool(self.llmclient)
 
     def next_llm(self, n=-1):
         self.llm_no = ((self.llm_no + 1) if n < 0 else n) % len(self.llmclient.backends)
@@ -104,12 +124,16 @@ class GeneraticAgent:
                 initial_user_content = build_multimodal_content(user_input, images)
             elif images:
                 print(f"[INFO] backend {type(self.llmclient.backend).__name__} does not support direct multimodal input, fallback to text attachment hints.")
-            gen = agent_runner_loop(self.llmclient, sys_prompt, user_input, 
+            gen = agent_runner_loop(self.llmclient, sys_prompt, user_input,
                                 handler, TOOLS_SCHEMA, max_turns=40, verbose=self.verbose,
                                 initial_user_content=initial_user_content)
             try:
-                full_resp = ""; last_pos = 0
-                for chunk in gen:
+                full_resp = ""; last_pos = 0; loop_result = None
+                while True:
+                    try:
+                        chunk = next(gen)
+                    except StopIteration as e:
+                        loop_result = e.value; break
                     if self.stop_sig: break
                     full_resp += chunk
                     if len(full_resp) - last_pos > 50:
@@ -117,8 +141,10 @@ class GeneraticAgent:
                         last_pos = len(full_resp)
                 if self.inc_out and last_pos < len(full_resp): display_queue.put({'next': full_resp[last_pos:], 'source': source})
                 if '</summary>' in full_resp: full_resp = full_resp.replace('</summary>', '</summary>\n\n')
-                if '</file_content>' in full_resp: full_resp = re.sub(r'<file_content>\s*(.*?)\s*</file_content>', r'\n````\n<file_content>\n\1\n</file_content>\n````', full_resp, flags=re.DOTALL)                
-                display_queue.put({'done': full_resp, 'source': source})
+                if '</file_content>' in full_resp: full_resp = re.sub(r'<file_content>\s*(.*?)\s*</file_content>', r'\n````\n<file_content>\n\1\n</file_content>\n````', full_resp, flags=re.DOTALL)
+                done_item = {'done': full_resp, 'source': source}
+                if loop_result: done_item['result'] = loop_result
+                display_queue.put(done_item)
                 self.history = handler.history_info
             except Exception as e:
                 print(f"Backend Error: {format_error(e)}")

@@ -6,13 +6,14 @@
 
 1. **Python 环境检查**
    - 确保安装了 Python 3.10+。几乎零额外依赖。
-   - `requests` 是唯一的第三方硬依赖，但多数 Python 发行版已预装。若缺失：`pip install requests`
+   - 推荐先安装 CLI 依赖：`pip install prompt_toolkit rich`
 
 2. **配置身份密钥 (Credentials)**
-   - 复制 `mykey_template.py` 为 `mykey.py` 并填入 API Key。
+   - 直接运行 `python cli.py`，CLI 会一步步引导您选择模型厂商并填写 `apikey / apibase / model`。
+   - 如需接入聊天机器人，CLI 也可以继续引导填写 QQ、飞书、企业微信、钉钉、Telegram 的配置。
 
 3. **唤醒 Agent（CLI 最小启动）**
-   - 运行 `python agentmain.py`，进入 CLI 交互模式。此时 Agent 已可工作。
+   - 运行 `python cli.py`，进入 CLI/TUI 交互模式。此时 Agent 已可工作。
    - 后续所有依赖（包括 GUI 模式所需的包）都可以叫 Agent 帮你安装。
 
 4. **（可选）升级为 GUI 模式**

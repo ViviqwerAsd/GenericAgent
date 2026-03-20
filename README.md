@@ -72,15 +72,22 @@ git clone https://github.com/lsdefine/GenericAgent.git
 cd GenericAgent
 
 # 2. Install minimal dependencies
-pip install streamlit pywebview
+pip install prompt_toolkit rich
 
-# 3. Configure API Key
-cp mykey_template.py mykey.py
-# Edit mykey.py and fill in your LLM API Key
+# 3. Launch the CLI onboarding
+python cli.py
 
-# 4. Launch
-python launch.pyw
+# The CLI will guide you through:
+# - choosing a model provider
+# - filling api key / api base / model
+# - optionally configuring chat bots
 ```
+
+After onboarding, the CLI includes:
+- `/model` for switching, adding, editing, removing, and setting the default model
+- `/chatbot` for checking bot status, starting/stopping bots, and configuring bot credentials
+- `/auto` and `/auto-now` for idle autonomous mode
+- dropdown command completion and selectable `ask_user` options
 
 #### Method 2: Windows Portable Version (Recommended for beginners)
 
@@ -98,6 +105,21 @@ python agentmain.py
 
 ## 🤖 Bot Interfaces (Optional)
 
+You can still launch bots directly with their standalone scripts, but the recommended CLI flow is:
+
+```bash
+python cli.py
+# then use /chatbot
+```
+
+The `/chatbot` panel can:
+- show which bots are configured and currently running
+- run startup preflight checks
+- start or stop supported bots
+- guide users through bot credential setup
+
+For CLI onboarding and `/chatbot` setup, `*_allowed_users` defaults to `['*']` so beginners can skip that field. If you want a private allowlist, edit `mykey.py` later.
+
 ### QQ Bot
 
 Uses `qq-botpy` WebSocket long connection — **no public webhook required**:
@@ -111,7 +133,7 @@ Add to `mykey.py`:
 ```python
 qq_app_id = "YOUR_APP_ID"
 qq_app_secret = "YOUR_APP_SECRET"
-qq_allowed_users = ["YOUR_USER_OPENID"]  # or ['*'] for public access
+qq_allowed_users = ["*"]  # optional, defaults to public access in the CLI wizard
 ```
 
 ```bash
@@ -133,7 +155,7 @@ python fsapp.py          # or python launch.pyw --feishu
 ```python
 fs_app_id = "cli_xxx"
 fs_app_secret = "xxx"
-fs_allowed_users = ["ou_xxx"]  # or ['*']
+fs_allowed_users = ["*"]  # optional, defaults to public access in the CLI wizard
 ```
 
 **Inbound support**: text, rich text post, images, files, audio, media, interactive cards / share cards
@@ -153,7 +175,7 @@ python wecomapp.py       # or python launch.pyw --wecom
 ```python
 wecom_bot_id = "your_bot_id"
 wecom_secret = "your_bot_secret"
-wecom_allowed_users = ["your_user_id"]
+wecom_allowed_users = ["*"]  # optional
 wecom_welcome_message = "Hello, I'm online."
 ```
 
@@ -167,7 +189,7 @@ python dingtalkapp.py    # or python launch.pyw --dingtalk
 ```python
 dingtalk_client_id = "your_app_key"
 dingtalk_client_secret = "your_app_secret"
-dingtalk_allowed_users = ["your_staff_id"]  # or ['*']
+dingtalk_allowed_users = ["*"]  # optional
 ```
 
 
@@ -176,7 +198,7 @@ dingtalk_allowed_users = ["your_staff_id"]  # or ['*']
 ```python
 # mykey.py
 tg_bot_token = 'YOUR_BOT_TOKEN'
-tg_allowed_users = [YOUR_USER_ID]
+tg_allowed_users = ['*']  # optional
 ```
 
 ```bash
@@ -322,16 +344,23 @@ MIT License — see [LICENSE](LICENSE)
 git clone https://github.com/lsdefine/GenericAgent.git
 cd GenericAgent
 
-# 2. 安装最小依赖
-pip install streamlit pywebview
+# 2. 安装 CLI 依赖
+pip install prompt_toolkit rich
 
-# 3. 配置 API Key
-cp mykey_template.py mykey.py
-# 编辑 mykey.py，填入你的 LLM API Key
+# 3. 启动 CLI 新手引导
+python cli.py
 
-# 4. 启动
-python launch.pyw
+# CLI 会一步步引导你：
+# - 选择模型厂商
+# - 填写 apikey / apibase / model
+# - 可选配置聊天机器人
 ```
+
+初始化完成后，CLI 还支持：
+- `/model`：切换、添加、编辑、删除模型，以及设置默认模型
+- `/chatbot`：查看机器人状态、启动/停止机器人、补全机器人配置
+- `/auto` 和 `/auto-now`：空闲自主行动
+- 命令下拉补全，以及 `ask_user` 的上下键候选选择
 
 #### 方法二：Windows 便携版（推荐新手）
 
@@ -350,6 +379,21 @@ python agentmain.py
 
 ## 🤖 Bot 接口（可选）
 
+除了直接运行各个平台脚本，更推荐的方式是：
+
+```bash
+python cli.py
+# 然后输入 /chatbot
+```
+
+`/chatbot` 面板会：
+- 展示哪些机器人已配置、哪些正在运行
+- 在启动前检查依赖和必要配置
+- 统一启动/停止机器人
+- 引导补全机器人配置
+
+在 CLI 引导或 `/chatbot` 配置过程中，`*_allowed_users` 会默认写成 `['*']`，新手可以跳过这一步；如果你想改成白名单模式，后续直接编辑 `mykey.py` 即可。
+
 ### QQ Bot
 
 使用 `qq-botpy` WebSocket 长连接，**无需公网 webhook**：
@@ -363,7 +407,7 @@ pip install qq-botpy
 ```python
 qq_app_id = "YOUR_APP_ID"
 qq_app_secret = "YOUR_APP_SECRET"
-qq_allowed_users = ["YOUR_USER_OPENID"]  # 或 ['*'] 公开访问
+qq_allowed_users = ["*"]  # 可选，CLI 向导默认公开访问
 ```
 
 ```bash
@@ -384,7 +428,7 @@ python fsapp.py          # 或 python launch.pyw --feishu
 ```python
 fs_app_id = "cli_xxx"
 fs_app_secret = "xxx"
-fs_allowed_users = ["ou_xxx"]  # 或 ['*']
+fs_allowed_users = ["*"]  # 可选，CLI 向导默认公开访问
 ```
 
 **入站支持**：文本、富文本 post、图片、文件、音频、media、交互卡片 / 分享卡片  
@@ -404,7 +448,7 @@ python wecomapp.py       # 或 python launch.pyw --wecom
 ```python
 wecom_bot_id = "your_bot_id"
 wecom_secret = "your_bot_secret"
-wecom_allowed_users = ["your_user_id"]
+wecom_allowed_users = ["*"]  # 可选
 wecom_welcome_message = "你好，我在线上。"
 ```
 
@@ -418,7 +462,7 @@ python dingtalkapp.py    # 或 python launch.pyw --dingtalk
 ```python
 dingtalk_client_id = "your_app_key"
 dingtalk_client_secret = "your_app_secret"
-dingtalk_allowed_users = ["your_staff_id"]  # 或 ['*']
+dingtalk_allowed_users = ["*"]  # 可选
 ```
 
 
@@ -427,7 +471,7 @@ dingtalk_allowed_users = ["your_staff_id"]  # 或 ['*']
 ```python
 # mykey.py
 tg_bot_token = 'YOUR_BOT_TOKEN'
-tg_allowed_users = [YOUR_USER_ID]
+tg_allowed_users = ['*']  # 可选
 ```
 
 ```bash

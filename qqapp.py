@@ -16,7 +16,7 @@ except Exception:
 agent = GeneraticAgent(); agent.verbose = False
 APP_ID = str(mykeys.get("qq_app_id", "") or "").strip()
 APP_SECRET = str(mykeys.get("qq_app_secret", "") or "").strip()
-ALLOWED = {str(x).strip() for x in mykeys.get("qq_allowed_users", []) if str(x).strip()}
+ALLOWED = {str(x).strip() for x in mykeys.get("qq_allowed_users", ["*"]) if str(x).strip()}
 PROCESSED_IDS, USER_TASKS = deque(maxlen=1000), {}
 SEQ_LOCK, MSG_SEQ = threading.Lock(), 1
 

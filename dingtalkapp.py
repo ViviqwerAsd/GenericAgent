@@ -16,7 +16,7 @@ except Exception:
 agent = GeneraticAgent(); agent.verbose = False
 CLIENT_ID = str(mykeys.get("dingtalk_client_id", "") or "").strip()
 CLIENT_SECRET = str(mykeys.get("dingtalk_client_secret", "") or "").strip()
-ALLOWED = {str(x).strip() for x in mykeys.get("dingtalk_allowed_users", []) if str(x).strip()}
+ALLOWED = {str(x).strip() for x in mykeys.get("dingtalk_allowed_users", ["*"]) if str(x).strip()}
 USER_TASKS = {}
 
 

@@ -16,7 +16,7 @@ agent = GeneraticAgent(); agent.verbose = False
 BOT_ID = str(mykeys.get("wecom_bot_id", "") or "").strip()
 SECRET = str(mykeys.get("wecom_secret", "") or "").strip()
 WELCOME = str(mykeys.get("wecom_welcome_message", "") or "").strip()
-ALLOWED = {str(x).strip() for x in mykeys.get("wecom_allowed_users", []) if str(x).strip()}
+ALLOWED = {str(x).strip() for x in mykeys.get("wecom_allowed_users", ["*"]) if str(x).strip()}
 PROCESSED_IDS, USER_TASKS = deque(maxlen=1000), {}
 
 

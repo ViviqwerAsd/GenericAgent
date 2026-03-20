@@ -12,7 +12,8 @@ from llmcore import mykeys
 
 agent = GeneraticAgent()
 agent.verbose = False
-ALLOWED = set(mykeys.get('tg_allowed_users', []))
+_raw_allowed = mykeys.get('tg_allowed_users', ['*']) or ['*']
+ALLOWED = {str(x).strip() for x in _raw_allowed if str(x).strip()}
 
 _TAG_PATS = [r'<' + t + r'>.*?</' + t + r'>' for t in ('thinking', 'summary', 'tool_use')]
 _TAG_PATS.append(r'<file_content>.*?</file_content>')
@@ -81,8 +82,8 @@ async def _stream(dq, msg):
             break
 
 async def handle_msg(update, ctx):
-    uid = update.effective_user.id
-    if ALLOWED and uid not in ALLOWED:
+    uid = str(update.effective_user.id)
+    if ALLOWED and "*" not in ALLOWED and uid not in ALLOWED:
         return await update.message.reply_text("no")
     msg = await update.message.reply_text("thinking...")
     prompt = f"If you need to show files to user, use [FILE:filepath] in your response.\n\n{update.message.text}"
@@ -116,9 +117,6 @@ if __name__ == '__main__':
         _lock_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM); _lock_sock.bind(('127.0.0.1', 19527))
     except OSError: 
         print('[Telegram] Another instance is already running, skiping...')
-        sys.exit(1)
-    if not ALLOWED: 
-        print('[Telegram] ERROR: tg_allowed_users in mykey.py is empty or missing. Set it to avoid unauthorized access.')
         sys.exit(1)
     _logf = open(os.path.join(os.path.dirname(__file__), 'temp', 'tgapp.log'), 'a', encoding='utf-8', buffering=1)
     sys.stdout = sys.stderr = _logf

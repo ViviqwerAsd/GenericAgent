@@ -229,7 +229,7 @@ def _extract_post_content(content_json):
 
 APP_ID = str(mykeys.get("fs_app_id", "") or "").strip()
 APP_SECRET = str(mykeys.get("fs_app_secret", "") or "").strip()
-ALLOWED_USERS = _to_allowed_set(mykeys.get("fs_allowed_users", []))
+ALLOWED_USERS = _to_allowed_set(mykeys.get("fs_allowed_users", ["*"]))
 PUBLIC_ACCESS = not ALLOWED_USERS or "*" in ALLOWED_USERS
 
 agent = GeneraticAgent()

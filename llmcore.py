@@ -1,18 +1,30 @@
-import os, json, re, time, requests, sys, threading, urllib3, base64, mimetypes
+import os, json, re, time, requests, sys, threading, urllib3, base64, mimetypes, importlib
 from datetime import datetime
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 def _load_mykeys():
     try:
-        import mykey; return {k: v for k, v in vars(mykey).items() if not k.startswith('_')}
+        importlib.invalidate_caches()
+        if 'mykey' in sys.modules:
+            mykey = importlib.reload(sys.modules['mykey'])
+        else:
+            mykey = importlib.import_module('mykey')
+        return {k: v for k, v in vars(mykey).items() if not k.startswith('_')}
     except ImportError: pass
     p = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mykey.json')
-    if not os.path.exists(p): raise Exception('[ERROR] mykey.py or mykey.json not found, please create one from mykey_template.')
+    if not os.path.exists(p): return {}
     with open(p, encoding='utf-8') as f: return json.load(f)
 
 mykeys = _load_mykeys()
 proxy = mykeys.get("proxy", 'http://127.0.0.1:2082')
 proxies = {"http": proxy, "https": proxy} if proxy else None
+
+def refresh_mykeys():
+    global mykeys, proxy, proxies
+    mykeys = _load_mykeys()
+    proxy = mykeys.get("proxy", 'http://127.0.0.1:2082')
+    proxies = {"http": proxy, "https": proxy} if proxy else None
+    return mykeys
 
 def compress_history_tags(messages, keep_recent=10, max_len=500):
     """Compress <thinking>/<tool_use>/<tool_result> tags in older messages to save tokens."""

@@ -6,19 +6,22 @@
 
 1. **Python 环境检查**
    - 确保安装了 Python 3.10+。几乎零额外依赖。
-   - 推荐先安装 CLI 依赖：`pip install prompt_toolkit rich`
+   - 原有桌面 / Streamlit 方式依赖：`pip install streamlit pywebview`
+   - 新增 CLI 方式依赖：`pip install prompt_toolkit rich`
 
 2. **配置身份密钥 (Credentials)**
-   - 直接运行 `python cli.py`，CLI 会一步步引导您选择模型厂商并填写 `apikey / apibase / model`。
+   - 原有桌面 / Streamlit 方式可以继续保留使用。
+   - 如果您想用新增的 CLI 方式，直接运行 `python cli.py`，CLI 会一步步引导您选择模型厂商并填写 `apikey / apibase / model`。
    - 如需接入聊天机器人，CLI 也可以继续引导填写 QQ、飞书、企业微信、钉钉、Telegram 的配置。
 
-3. **唤醒 Agent（CLI 最小启动）**
-   - 运行 `python cli.py`，进入 CLI/TUI 交互模式。此时 Agent 已可工作。
-   - 后续所有依赖（包括 GUI 模式所需的包）都可以叫 Agent 帮你安装。
+3. **唤醒 Agent**
+   - 原有桌面 / Streamlit 方式：运行 `python launch.pyw`。
+   - 新增 CLI 方式：运行 `python cli.py`，进入 CLI/TUI 交互模式。
+   - 两种方式可以并存，CLI 是新增入口，不会替换原有 GUI 入口。
 
-4. **（可选）升级为 GUI 模式**
-   - **指令**：`pip install streamlit pywebview`
-   - 安装后运行 `launch.pyw`，即可使用悬浮窗 GUI 界面。
+4. **（可选）按你的习惯选择入口**
+   - 想继续沿用原来的悬浮窗 / Streamlit，就运行 `launch.pyw`
+   - 想使用新加的命令行交互，就运行 `cli.py`
 
 ## 第二阶段：能力激活 (Ability Activation)
 

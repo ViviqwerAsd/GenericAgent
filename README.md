@@ -64,14 +64,28 @@ After a few weeks, your agent instance will have a skill tree no one else in the
 
 ## 🚀 Quick Start
 
-#### Method 1: Standard Installation
+#### Method 1: Existing Desktop / Streamlit Flow
 
 ```bash
 # 1. Clone the repo
 git clone https://github.com/lsdefine/GenericAgent.git
 cd GenericAgent
 
-# 2. Install minimal dependencies
+# 2. Install GUI dependencies
+pip install streamlit pywebview
+
+# 3. Launch the desktop window / Streamlit flow
+python launch.pyw
+```
+
+#### Method 2: New CLI Flow
+
+```bash
+# 1. Clone the repo
+git clone https://github.com/lsdefine/GenericAgent.git
+cd GenericAgent
+
+# 2. Install minimal CLI dependencies
 pip install prompt_toolkit rich
 
 # 3. Launch the CLI onboarding
@@ -89,13 +103,13 @@ After onboarding, the CLI includes:
 - `/auto` and `/auto-now` for idle autonomous mode
 - dropdown command completion and selectable `ask_user` options
 
-#### Method 2: Windows Portable Version (Recommended for beginners)
+#### Method 3: Windows Portable Version (Recommended for beginners)
 
 [Download portable version](http://kw.fudan.edu.cn/resources/PC-Agent-Portable.zip) (19MB, unzip and run)
 
 Full guide: [WELCOME_NEW_USER.md](WELCOME_NEW_USER.md)
 
-#### Method 3: Android (Termux)
+#### Method 4: Android (Termux)
 
 ```bash
 cd /sdcard/ga
@@ -105,7 +119,9 @@ python agentmain.py
 
 ## 🤖 Bot Interfaces (Optional)
 
-You can still launch bots directly with their standalone scripts, but the recommended CLI flow is:
+The original GUI / desktop flow remains available. CLI is an additional entry point, not a replacement.
+
+You can still launch bots directly with their standalone scripts, or use the new CLI flow:
 
 ```bash
 python cli.py
@@ -337,7 +353,21 @@ MIT License — see [LICENSE](LICENSE)
 
 ## 🚀 快速开始
 
-#### 方法一：标准安装
+#### 方法一：保留原有桌面 / Streamlit 方式
+
+```bash
+# 1. 克隆仓库
+git clone https://github.com/lsdefine/GenericAgent.git
+cd GenericAgent
+
+# 2. 安装 GUI 依赖
+pip install streamlit pywebview
+
+# 3. 启动原有桌面窗口
+python launch.pyw
+```
+
+#### 方法二：新增 CLI 方式
 
 ```bash
 # 1. 克隆仓库
@@ -362,13 +392,13 @@ python cli.py
 - `/auto` 和 `/auto-now`：空闲自主行动
 - 命令下拉补全，以及 `ask_user` 的上下键候选选择
 
-#### 方法二：Windows 便携版（推荐新手）
+#### 方法三：Windows 便携版（推荐新手）
 
 [下载便携版](http://kw.fudan.edu.cn/resources/PC-Agent-Portable.zip)（19MB，解压即用）
 
 完整引导流程见 [WELCOME_NEW_USER.md](WELCOME_NEW_USER.md)。
 
-#### 方法三：Android（Termux）
+#### 方法四：Android（Termux）
 
 ```bash
 cd /sdcard/ga
@@ -379,7 +409,9 @@ python agentmain.py
 
 ## 🤖 Bot 接口（可选）
 
-除了直接运行各个平台脚本，更推荐的方式是：
+原有桌面 / Streamlit 方式仍然保留，CLI 只是新增入口。
+
+除了直接运行各个平台脚本，也可以使用新增的 CLI 方式：
 
 ```bash
 python cli.py

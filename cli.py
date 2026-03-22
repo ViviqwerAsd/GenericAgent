@@ -98,11 +98,11 @@ COMMANDS = {
     "/exit":     "Quit",
 }
 CHATBOT_SPECS = {
-    "Telegram": {"script": "tgapp.py", "required": ["tg_bot_token"]},
-    "QQ": {"script": "qqapp.py", "required": ["qq_app_id", "qq_app_secret"]},
-    "Feishu": {"script": "fsapp.py", "required": ["fs_app_id", "fs_app_secret"]},
-    "WeCom": {"script": "wecomapp.py", "required": ["wecom_bot_id", "wecom_secret"]},
-    "DingTalk": {"script": "dingtalkapp.py", "required": ["dingtalk_client_id", "dingtalk_client_secret"]},
+    "Telegram": {"script": os.path.join("frontends", "tgapp.py"), "required": ["tg_bot_token"]},
+    "QQ": {"script": os.path.join("frontends", "qqapp.py"), "required": ["qq_app_id", "qq_app_secret"]},
+    "Feishu": {"script": os.path.join("frontends", "fsapp.py"), "required": ["fs_app_id", "fs_app_secret"]},
+    "WeCom": {"script": os.path.join("frontends", "wecomapp.py"), "required": ["wecom_bot_id", "wecom_secret"]},
+    "DingTalk": {"script": os.path.join("frontends", "dingtalkapp.py"), "required": ["dingtalk_client_id", "dingtalk_client_secret"]},
 }
 CHATBOT_DEPENDENCIES = {
     "Telegram": ["telegram"],

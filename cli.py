@@ -114,6 +114,10 @@ CHATBOT_DEPENDENCIES = {
 chatbot_processes = {}
 
 
+class UserCancelled(Exception):
+    """Raised when the user aborts an interactive CLI flow."""
+
+
 # ── Auto-completer ─────────────────────────────────────────────────────────
 
 def get_llm_selector_options(agent):
@@ -288,7 +292,7 @@ def prompt_text_input(label, default=None, secret=False, allow_empty=False):
         try:
             answer = session.prompt(HTML(f'<b><style fg="ansicyan">{prompt_label}</style></b>'), is_password=secret).strip()
         except (EOFError, KeyboardInterrupt):
-            return ""
+            raise UserCancelled()
         if answer:
             return answer
         if default is not None:
@@ -1085,7 +1089,7 @@ def interactive_select(question, candidates):
                 pre_run=lambda: session.default_buffer.start_completion(select_first=True),
             ).strip()
         except (EOFError, KeyboardInterrupt):
-            return ""
+            raise UserCancelled()
 
         # Preserve legacy numeric shortcuts.
         if answer.isdigit():
@@ -1106,7 +1110,7 @@ def interactive_select(question, candidates):
                 HTML('<b><style fg="ansimagenta">? </style></b>'),
             ).strip()
         except (EOFError, KeyboardInterrupt):
-            return ""
+            raise UserCancelled()
         return answer
 
 
@@ -1121,60 +1125,63 @@ def handle_command(agent, cmd, llm_selector=None):
         command = "/model"
     arg = parts[1].strip() if len(parts) > 1 else ""
 
-    if command == "/help":
-        table = Table(show_header=False, box=None, padding=(0, 2, 0, 0), title="Commands", title_style="bold cyan")
-        table.add_column("cmd", style="bold white", min_width=14)
-        table.add_column("desc", style="dim")
-        for cmd_name, desc in COMMANDS.items():
-            table.add_row(cmd_name, desc)
-        console.print()
-        console.print(table)
-        console.print()
-    elif command == "/stop":
-        agent.abort()
-        console.print(Text("  ■ Stopped.", style="yellow"))
-    elif command == "/new":
-        agent.abort()
-        agent.history = []
-        console.print(Text("  ✓ New conversation started.", style="green"))
-    elif command == "/model":
-        if arg == "/add":
-            run_model_setup_wizard(agent=agent, include_bots=False)
-        elif arg == "/edit":
-            edit_model_config(agent=agent)
-        elif arg == "/remove":
-            remove_model_config(agent=agent)
-        elif arg == "/default":
-            set_default_model_config(agent=agent)
-        elif arg:
-            try:
-                n = int(arg)
-                agent.next_llm(n)
-                console.print(Text(f"  ✓ Switched to model #{n}: {agent.get_llm_name()}", style="green"))
-            except (ValueError, IndexError):
-                console.print(Text(f"  ✗ Invalid model selection: {arg}", style="red"))
+    try:
+        if command == "/help":
+            table = Table(show_header=False, box=None, padding=(0, 2, 0, 0), title="Commands", title_style="bold cyan")
+            table.add_column("cmd", style="bold white", min_width=14)
+            table.add_column("desc", style="dim")
+            for cmd_name, desc in COMMANDS.items():
+                table.add_row(cmd_name, desc)
+            console.print()
+            console.print(table)
+            console.print()
+        elif command == "/stop":
+            agent.abort()
+            console.print(Text("  ■ Stopped.", style="yellow"))
+        elif command == "/new":
+            agent.abort()
+            agent.history = []
+            console.print(Text("  ✓ New conversation started.", style="green"))
+        elif command == "/model":
+            if arg == "/add":
+                run_model_setup_wizard(agent=agent, include_bots=False)
+            elif arg == "/edit":
+                edit_model_config(agent=agent)
+            elif arg == "/remove":
+                remove_model_config(agent=agent)
+            elif arg == "/default":
+                set_default_model_config(agent=agent)
+            elif arg:
+                try:
+                    n = int(arg)
+                    agent.next_llm(n)
+                    console.print(Text(f"  ✓ Switched to model #{n}: {agent.get_llm_name()}", style="green"))
+                except (ValueError, IndexError):
+                    console.print(Text(f"  ✗ Invalid model selection: {arg}", style="red"))
+            else:
+                select_model_interactively(agent, selector=llm_selector)
+        elif command == "/chatbot":
+            manage_chatbots()
+        elif command == "/auto":
+            auto_mode = not auto_mode
+            if auto_mode and not last_reply_time:
+                last_reply_time = int(time.time())
+            state, color = ("ON", "green") if auto_mode else ("OFF", "red")
+            console.print(Text(f"  Autonomous mode: {state}", style=f"bold {color}"))
+        elif command == "/auto-now":
+            last_reply_time = int(time.time()) - AUTO_IDLE_SECONDS
+            enqueue_autonomous_task(agent)
+            console.print(Text("  ✓ Idle autonomous task triggered.", style="green"))
+        elif command == "/reinject":
+            agent.llmclient.last_tools = ''
+            console.print(Text("  ✓ System prompt will be re-injected next turn.", style="green"))
+        elif command in ("/exit", "/quit"):
+            console.print(Text("  Goodbye.", style="dim"))
+            sys.exit(0)
         else:
-            select_model_interactively(agent, selector=llm_selector)
-    elif command == "/chatbot":
-        manage_chatbots()
-    elif command == "/auto":
-        auto_mode = not auto_mode
-        if auto_mode and not last_reply_time:
-            last_reply_time = int(time.time())
-        state, color = ("ON", "green") if auto_mode else ("OFF", "red")
-        console.print(Text(f"  Autonomous mode: {state}", style=f"bold {color}"))
-    elif command == "/auto-now":
-        last_reply_time = int(time.time()) - AUTO_IDLE_SECONDS
-        enqueue_autonomous_task(agent)
-        console.print(Text("  ✓ Idle autonomous task triggered.", style="green"))
-    elif command == "/reinject":
-        agent.llmclient.last_tools = ''
-        console.print(Text("  ✓ System prompt will be re-injected next turn.", style="green"))
-    elif command in ("/exit", "/quit"):
-        console.print(Text("  Goodbye.", style="dim"))
-        sys.exit(0)
-    else:
-        console.print(Text(f"  ✗ Unknown command: {command}. Type /help for available commands.", style="red"))
+            console.print(Text(f"  ✗ Unknown command: {command}. Type /help for available commands.", style="red"))
+    except UserCancelled:
+        console.print(Text("  ↩ Cancelled.", style="yellow"))
 
 
 # ── Input setup ─────────────────────────────────────────────────────────────
@@ -1234,7 +1241,10 @@ def main():
     global last_reply_time
     agent = GeneraticAgent()
     if agent.llmclient is None:
-        run_model_setup_wizard(agent=agent, include_bots=True)
+        try:
+            run_model_setup_wizard(agent=agent, include_bots=True)
+        except UserCancelled:
+            console.print(Text("  ↩ Setup cancelled.", style="yellow"))
         if agent.llmclient is None:
             console.print(Text("  ERROR: No usable model configured.", style="bold red"))
             sys.exit(1)

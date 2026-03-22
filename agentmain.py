@@ -58,36 +58,42 @@ class GeneraticAgent:
         self.handler = None; self.verbose = True
         self.reload_backends()
 
-    def _build_llm_clients(self, mykeys):
-        llm_clients = []
+    def _iter_llm_configs(self, mykeys):
         ordered_items = list(mykeys.items())
         default_key = mykeys.get("default_model_key")
         if default_key:
-            ordered_items = [item for item in ordered_items if item[0] == default_key] + [item for item in ordered_items if item[0] != default_key]
-        for k, cfg in ordered_items:
-            if not any(x in k for x in ['api', 'config', 'cookie']): 
-                continue
+            ordered_items.sort(key=lambda item: item[0] != default_key)
+        for key, cfg in ordered_items:
+            if any(x in key for x in ['api', 'config', 'cookie']):
+                yield key, cfg
+
+    def _make_llm_clients(self, key, cfg):
+        if 'native' in key and 'claude' in key:
+            return [NativeToolClient(NativeClaudeSession(cfg=cfg))]
+        if 'claude' in key:
+            return [ToolClient(ClaudeSession(cfg=cfg))]
+        if 'oai' in key:
+            return [ToolClient(LLMSession(cfg=cfg))]
+        if 'xai' in key:
+            return [ToolClient(XaiSession(cfg=cfg))]
+        if 'google' in key or 'gemini' in key:
+            gcfg = cfg if isinstance(cfg, dict) else {'google_api_key': cfg}
+            return [ToolClient(GeminiSession(cfg=gcfg))]
+        if 'sider' in key:
+            return [ToolClient(SiderLLMSession(cfg={'apikey': cfg, 'model': model})) for model in ["gemini-3.0-flash", "gpt-5.4"]]
+        return []
+
+    def _build_llm_clients(self, mykeys):
+        llm_clients = []
+        for key, cfg in self._iter_llm_configs(mykeys):
             try:
-                if 'native' in k and 'claude' in k:
-                    llm_clients.append(NativeToolClient(NativeClaudeSession(cfg=cfg)))
-                elif 'claude' in k:
-                    llm_clients.append(ToolClient(ClaudeSession(cfg=cfg)))
-                elif 'oai' in k:
-                    llm_clients.append(ToolClient(LLMSession(cfg=cfg)))
-                elif 'xai' in k:
-                    llm_clients.append(ToolClient(XaiSession(cfg=cfg)))
-                elif 'google' in k or 'gemini' in k:
-                    gcfg = cfg if isinstance(cfg, dict) else {'google_api_key': cfg}
-                    llm_clients.append(ToolClient(GeminiSession(cfg=gcfg)))
-                elif 'sider' in k:
-                    llm_clients += [ToolClient(SiderLLMSession(cfg={'apikey': cfg, 'model': x})) for x in ["gemini-3.0-flash", "gpt-5.4"]]
-            except:
+                llm_clients.extend(self._make_llm_clients(key, cfg))
+            except Exception:
                 pass
-        for client in llm_clients:
-            client.backends = llm_clients
-            if not hasattr(client, "last_tools"):
-                client.last_tools = ''
         return llm_clients
+
+    def _describe_client(self, client):
+        return f"{type(client.backend).__name__}/{client.backend.default_model}"
 
     def reload_backends(self):
         mykeys = refresh_mykeys()
@@ -100,12 +106,10 @@ class GeneraticAgent:
     def next_llm(self, n=-1):
         self.llm_no = ((self.llm_no + 1) if n < 0 else n) % len(self.llmclients)
         self.llmclient = self.llmclients[self.llm_no]
-        if hasattr(self.llmclient, 'last_tools'):
-            self.llmclient.last_tools = ''
-    def list_llms(self): return [(i, f"{type(b.backend).__name__}/{b.backend.default_model}", i == self.llm_no) for i, b in enumerate(self.llmclients)]
+        self.llmclient.last_tools = ''
+    def list_llms(self): return [(i, self._describe_client(client), i == self.llm_no) for i, client in enumerate(self.llmclients)]
     def get_llm_name(self):
-        b = self.llmclient
-        return f"{type(b.backend).__name__}/{b.backend.default_model}"
+        return self._describe_client(self.llmclient)
 
     def abort(self):
         print('Abort current task...')

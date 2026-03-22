@@ -908,7 +908,7 @@ def print_banner(agent):
 
     if agent.llmclient:
         llm_name = agent.get_llm_name()
-        count = len(agent.llmclient.backends)
+        count = len(agent.llmclients)
         console.print(Text(f"  │  Model: {llm_name}  ({count} backends)", style="dim"))
     else:
         console.print(Text("  │  Model: not configured", style="bold red"))

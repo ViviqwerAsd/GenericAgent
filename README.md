@@ -134,7 +134,7 @@ The `/chatbot` panel can:
 - start or stop supported bots
 - guide users through bot credential setup
 
-For CLI onboarding and `/chatbot` setup, `*_allowed_users` defaults to `['*']` so beginners can skip that field. If you want a private allowlist, edit `mykey.py` later.
+For CLI onboarding and `/chatbot` setup, QQ / Feishu / WeCom / DingTalk default `*_allowed_users` to `['*']` so beginners can skip that field. Telegram is stricter and should be set to your own Telegram `user_id`.
 
 ### QQ Bot
 
@@ -214,7 +214,7 @@ dingtalk_allowed_users = ["*"]  # optional
 ```python
 # mykey.py
 tg_bot_token = 'YOUR_BOT_TOKEN'
-tg_allowed_users = ['*']  # optional
+tg_allowed_users = [YOUR_TELEGRAM_USER_ID]
 ```
 
 ```bash
@@ -424,7 +424,7 @@ python cli.py
 - 统一启动/停止机器人
 - 引导补全机器人配置
 
-在 CLI 引导或 `/chatbot` 配置过程中，`*_allowed_users` 会默认写成 `['*']`，新手可以跳过这一步；如果你想改成白名单模式，后续直接编辑 `mykey.py` 即可。
+在 CLI 引导或 `/chatbot` 配置过程中，QQ / 飞书 / 企业微信 / 钉钉会默认把 `*_allowed_users` 写成 `['*']`；Telegram 则会要求你显式填写自己的 `user_id`。
 
 ### QQ Bot
 
@@ -503,7 +503,7 @@ dingtalk_allowed_users = ["*"]  # 可选
 ```python
 # mykey.py
 tg_bot_token = 'YOUR_BOT_TOKEN'
-tg_allowed_users = ['*']  # 可选
+tg_allowed_users = [YOUR_TELEGRAM_USER_ID]
 ```
 
 ```bash

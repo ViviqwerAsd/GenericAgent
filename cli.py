@@ -77,7 +77,7 @@ MODEL_PROVIDERS = {
     },
 }
 BOT_SPECS = {
-    "Telegram": [("tg_bot_token", "Bot token"), ("tg_allowed_users", "Allowed user IDs (comma separated)")],
+    "Telegram": [("tg_bot_token", "Bot token"), ("tg_allowed_users", "Your Telegram user ID (comma separated if multiple)")],
     "QQ": [("qq_app_id", "App ID"), ("qq_app_secret", "App Secret"), ("qq_allowed_users", "Allowed user openids (comma separated)")],
     "Feishu": [("fs_app_id", "App ID"), ("fs_app_secret", "App Secret"), ("fs_allowed_users", "Allowed user IDs (comma separated)")],
     "WeCom": [("wecom_bot_id", "Bot ID"), ("wecom_secret", "Bot Secret"), ("wecom_allowed_users", "Allowed user IDs (comma separated)"), ("wecom_welcome_message", "Welcome message")],
@@ -366,6 +366,10 @@ def collect_bot_settings():
             return updates
         for field, label in BOT_SPECS[bot]:
             if field.endswith("_users"):
+                if bot == "Telegram":
+                    raw = prompt_text_input(label, allow_empty=False)
+                    updates[field] = parse_csv_list(raw)
+                    continue
                 updates[field] = ["*"]
                 continue
             raw = prompt_text_input(label, allow_empty=False, secret="secret" in field.lower() or "token" in field.lower())
@@ -434,6 +438,13 @@ def chatbot_preflight(name, values):
 
     if not get_model_config_entries(values):
         issues.append("No saved model found. Configure a model first with /model.")
+
+    if name == "Telegram":
+        allowed = values.get("tg_allowed_users")
+        if not _has_config_value(allowed):
+            issues.append("Missing required setting: tg_allowed_users")
+        elif "*" in {str(item).strip() for item in (allowed if isinstance(allowed, (list, tuple, set)) else [allowed])}:
+            issues.append("Telegram requires your own user_id; tg_allowed_users cannot be ['*'].")
 
     for module_name in CHATBOT_DEPENDENCIES.get(name, []):
         try:

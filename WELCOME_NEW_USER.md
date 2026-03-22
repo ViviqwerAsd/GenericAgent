@@ -13,6 +13,7 @@
    - 原有桌面 / Streamlit 方式可以继续保留使用。
    - 如果您想用新增的 CLI 方式，直接运行 `python cli.py`，CLI 会一步步引导您选择模型厂商并填写 `apikey / apibase / model`。
    - 如需接入聊天机器人，CLI 也可以继续引导填写 QQ、飞书、企业微信、钉钉、Telegram 的配置。
+   - 其中 Telegram 会要求填写你自己的 `user_id`，不会默认公开访问。
 
 3. **唤醒 Agent**
    - 原有桌面 / Streamlit 方式：运行 `python launch.pyw`。

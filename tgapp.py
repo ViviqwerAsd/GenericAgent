@@ -12,7 +12,7 @@ from llmcore import mykeys
 
 agent = GeneraticAgent()
 agent.verbose = False
-_raw_allowed = mykeys.get('tg_allowed_users', ['*']) or ['*']
+_raw_allowed = mykeys.get('tg_allowed_users', []) or []
 ALLOWED = {str(x).strip() for x in _raw_allowed if str(x).strip()}
 
 _TAG_PATS = [r'<' + t + r'>.*?</' + t + r'>' for t in ('thinking', 'summary', 'tool_use')]
@@ -83,7 +83,7 @@ async def _stream(dq, msg):
 
 async def handle_msg(update, ctx):
     uid = str(update.effective_user.id)
-    if ALLOWED and "*" not in ALLOWED and uid not in ALLOWED:
+    if ALLOWED and uid not in ALLOWED:
         return await update.message.reply_text("no")
     msg = await update.message.reply_text("thinking...")
     prompt = f"If you need to show files to user, use [FILE:filepath] in your response.\n\n{update.message.text}"
@@ -117,6 +117,9 @@ if __name__ == '__main__':
         _lock_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM); _lock_sock.bind(('127.0.0.1', 19527))
     except OSError: 
         print('[Telegram] Another instance is already running, skiping...')
+        sys.exit(1)
+    if not ALLOWED or "*" in ALLOWED:
+        print('[Telegram] ERROR: please set tg_allowed_users to your own Telegram user_id in mykey.py or mykey.json')
         sys.exit(1)
     _logf = open(os.path.join(os.path.dirname(__file__), 'temp', 'tgapp.log'), 'a', encoding='utf-8', buffering=1)
     sys.stdout = sys.stderr = _logf

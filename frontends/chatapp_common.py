@@ -94,7 +94,7 @@ def require_runtime(agent, label, **required):
 
 
 def redirect_log(script_file, log_name, label, allowed):
-    log_dir = os.path.join(os.path.dirname(script_file), "temp")
+    log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(script_file))), "temp")
     os.makedirs(log_dir, exist_ok=True)
     logf = open(os.path.join(log_dir, log_name), "a", encoding="utf-8", buffering=1)
     sys.stdout = sys.stderr = logf

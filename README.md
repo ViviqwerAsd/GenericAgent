@@ -153,7 +153,7 @@ qq_allowed_users = ["*"]  # optional, defaults to public access in the CLI wizar
 ```
 
 ```bash
-python qqapp.py
+python frontends/qqapp.py
 # or launch together with the desktop floating window
 python launch.pyw --qq
 ```
@@ -165,7 +165,7 @@ python launch.pyw --qq
 
 ```bash
 pip install lark-oapi
-python fsapp.py          # or python launch.pyw --feishu
+python frontends/fsapp.py          # or python launch.pyw --feishu
 ```
 
 ```python
@@ -185,7 +185,7 @@ Full setup: [assets/SETUP_FEISHU.md](assets/SETUP_FEISHU.md)
 
 ```bash
 pip install wecom_aibot_sdk
-python wecomapp.py       # or python launch.pyw --wecom
+python frontends/wecomapp.py       # or python launch.pyw --wecom
 ```
 
 ```python
@@ -199,7 +199,7 @@ wecom_welcome_message = "Hello, I'm online."
 
 ```bash
 pip install dingtalk-stream
-python dingtalkapp.py    # or python launch.pyw --dingtalk
+python frontends/dingtalkapp.py    # or python launch.pyw --dingtalk
 ```
 
 ```python
@@ -218,7 +218,7 @@ tg_allowed_users = [YOUR_TELEGRAM_USER_ID]
 ```
 
 ```bash
-python tgapp.py
+python frontends/tgapp.py
 ```
 
 
@@ -443,7 +443,7 @@ qq_allowed_users = ["*"]  # 可选，CLI 向导默认公开访问
 ```
 
 ```bash
-python qqapp.py
+python frontends/qqapp.py
 # 或与桌面悬浮窗一起启动
 python launch.pyw --qq
 ```
@@ -454,7 +454,7 @@ python launch.pyw --qq
 
 ```bash
 pip install lark-oapi
-python fsapp.py          # 或 python launch.pyw --feishu
+python frontends/fsapp.py          # 或 python launch.pyw --feishu
 ```
 
 ```python
@@ -474,7 +474,7 @@ fs_allowed_users = ["*"]  # 可选，CLI 向导默认公开访问
 
 ```bash
 pip install wecom_aibot_sdk
-python wecomapp.py       # 或 python launch.pyw --wecom
+python frontends/wecomapp.py       # 或 python launch.pyw --wecom
 ```
 
 ```python
@@ -488,7 +488,7 @@ wecom_welcome_message = "你好，我在线上。"
 
 ```bash
 pip install dingtalk-stream
-python dingtalkapp.py    # 或 python launch.pyw --dingtalk
+python frontends/dingtalkapp.py    # 或 python launch.pyw --dingtalk
 ```
 
 ```python
@@ -507,7 +507,7 @@ tg_allowed_users = [YOUR_TELEGRAM_USER_ID]
 ```
 
 ```bash
-python tgapp.py
+python frontends/tgapp.py
 ```
 
 

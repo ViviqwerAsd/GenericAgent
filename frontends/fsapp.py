@@ -1,21 +1,13 @@
-import glob
-import json
-import os
-import queue as Q
-import re
-import sys
-import threading
-import time
+import glob, json, os, queue as Q, re, sys, threading, time
 
-PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)
 os.chdir(PROJECT_ROOT)
+from agentmain import GeneraticAgent
+from llmcore import mykeys
 
 import lark_oapi as lark
 from lark_oapi.api.im.v1 import *
-
-from agentmain import GeneraticAgent
-from llmcore import mykeys
 
 _TAG_PATS = [r"<" + t + r">.*?</" + t + r">" for t in ("thinking", "summary", "tool_use", "file_content")]
 _IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp", ".ico", ".tiff", ".tif"}

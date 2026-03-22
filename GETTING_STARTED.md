@@ -263,7 +263,7 @@ qq_allowed_users = ["*"]  # 可选，CLI 向导默认会填成 ['*']
 
 ```bash
 pip install qq-botpy
-python qqapp.py
+python frontends/qqapp.py
 # 或与桌面窗口一起启动
 python launch.pyw --qq
 ```
@@ -272,7 +272,7 @@ python launch.pyw --qq
 - 飞书: [assets/SETUP_FEISHU.md](assets/SETUP_FEISHU.md)
 - 企业微信: `python launch.pyw --wecom`
 - 钉钉: `python launch.pyw --dingtalk`
-- Telegram: `python tgapp.py`
+- Telegram: `python frontends/tgapp.py`
 
 如果你已经在 CLI 里完成了机器人配置，也可以直接：
 

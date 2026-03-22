@@ -2,6 +2,9 @@ import webview, threading, subprocess, sys, time, os, ctypes, atexit, socket, ra
 
 WINDOW_WIDTH, WINDOW_HEIGHT, RIGHT_PADDING, TOP_PADDING = 600, 900, 0, 100
 
+script_dir = os.path.dirname(os.path.abspath(__file__))
+frontends_dir = os.path.join(script_dir, "frontends")
+
 def find_free_port(lo=18501, hi=18599):
     ports = list(range(lo, hi+1)); random.shuffle(ports)
     for p in ports:
@@ -15,8 +18,7 @@ def get_screen_width():
 
 def start_streamlit(port):
     global proc
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    cmd = [sys.executable, "-m", "streamlit", "run", os.path.join(script_dir, "stapp.py"), "--server.port", str(port), "--server.address", "localhost", "--server.headless", "true", "--theme.base", "dark"]  # 暗黑模式
+    cmd = [sys.executable, "-m", "streamlit", "run", os.path.join(frontends_dir, "stapp.py"), "--server.port", str(port), "--server.address", "localhost", "--server.headless", "true", "--theme.base", "dark"]  # 暗黑模式
     proc = subprocess.Popen(cmd)
     atexit.register(proc.kill)
 
@@ -77,36 +79,31 @@ if __name__ == '__main__':
     threading.Thread(target=start_streamlit, args=(port,), daemon=True).start()
 
     if args.tg:
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        tgproc = subprocess.Popen([sys.executable, os.path.join(script_dir, "tgapp.py")], creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
+        tgproc = subprocess.Popen([sys.executable, os.path.join(frontends_dir, "tgapp.py")], creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
         atexit.register(tgproc.kill)
         print('[Launch] Telegram Bot started')
     else: print('[Launch] Telegram Bot not enabled (use --tg to start)')
 
     if args.qq:
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        qqproc = subprocess.Popen([sys.executable, os.path.join(script_dir, "qqapp.py")], creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
+        qqproc = subprocess.Popen([sys.executable, os.path.join(frontends_dir, "qqapp.py")], creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
         atexit.register(qqproc.kill)
         print('[Launch] QQ Bot started')
     else: print('[Launch] QQ Bot not enabled (use --qq to start)')
 
     if args.feishu:
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        fsproc = subprocess.Popen([sys.executable, os.path.join(script_dir, "fsapp.py")], creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
+        fsproc = subprocess.Popen([sys.executable, os.path.join(frontends_dir, "fsapp.py")], creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
         atexit.register(fsproc.kill)
         print('[Launch] Feishu Bot started')
     else: print('[Launch] Feishu Bot not enabled (use --feishu to start)')
 
     if args.wecom:
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        wcproc = subprocess.Popen([sys.executable, os.path.join(script_dir, "wecomapp.py")], creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
+        wcproc = subprocess.Popen([sys.executable, os.path.join(frontends_dir, "wecomapp.py")], creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
         atexit.register(wcproc.kill)
         print('[Launch] WeCom Bot started')
     else: print('[Launch] WeCom Bot not enabled (use --wecom to start)')
 
     if args.dingtalk:
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        dtproc = subprocess.Popen([sys.executable, os.path.join(script_dir, "dingtalkapp.py")], creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
+        dtproc = subprocess.Popen([sys.executable, os.path.join(frontends_dir, "dingtalkapp.py")], creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
         atexit.register(dtproc.kill)
         print('[Launch] DingTalk Bot started')
     else: print('[Launch] DingTalk Bot not enabled (use --dingtalk to start)')
@@ -114,7 +111,6 @@ if __name__ == '__main__':
     if not args.no_sched:
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM); sock.bind(('127.0.0.1', 45762)); sock.listen(1)
-            script_dir = os.path.dirname(os.path.abspath(__file__))
             scheduler_proc = subprocess.Popen([sys.executable, os.path.join(script_dir, "agentmain.py"), "--reflect", os.path.join(script_dir, "reflect", "scheduler.py"), "--llm_no", str(args.llm_no)], creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0); 
             atexit.register(lambda: (scheduler_proc.kill(), sock.close()))
             print('[Launch] Task Scheduler started')

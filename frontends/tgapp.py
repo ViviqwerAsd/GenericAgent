@@ -1,5 +1,5 @@
 import os, sys, re, threading, asyncio, queue as Q, socket, time
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from agentmain import GeneraticAgent
 try:
     from telegram import Update
@@ -121,7 +121,7 @@ if __name__ == '__main__':
     if not ALLOWED or "*" in ALLOWED:
         print('[Telegram] ERROR: please set tg_allowed_users to your own Telegram user_id in mykey.py or mykey.json')
         sys.exit(1)
-    _logf = open(os.path.join(os.path.dirname(__file__), 'temp', 'tgapp.log'), 'a', encoding='utf-8', buffering=1)
+    _logf = open(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'temp', 'tgapp.log'), 'a', encoding='utf-8', buffering=1)
     sys.stdout = sys.stderr = _logf
     print('[NEW] New process starting, the above are history infos ...')
     threading.Thread(target=agent.run, daemon=True).start()
